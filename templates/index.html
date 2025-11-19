@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sonify - AI Voice Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'system-ui', 'sans-serif'],
+            },
+          }
+        }
+      }
+    </script>
+    <style>
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+      @keyframes blink {
+        0%, 20%, 100% { opacity: 0; }
+        50% { opacity: 1; }
+      }
+      @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+      }
+      @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      .loading-spinner {
+        animation: spin 1s linear infinite;
+      }
+      .loading-text {
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      .loading-dots span {
+        animation: blink 1.4s infinite;
+      }
+      .loading-dots span:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      .loading-dots span:nth-child(3) {
+        animation-delay: 0.4s;
+      }
+      .gradient-bg {
+        background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
+        background-size: 400% 400%;
+        animation: gradient 15s ease infinite;
+      }
+      .glass-effect {
+        backdrop-filter: blur(20px) saturate(180%);
+        background-color: rgba(255, 255, 255, 0.75);
+        border: 1px solid rgba(209, 213, 219, 0.3);
+      }
+      .audio-wave {
+        animation: float 3s ease-in-out infinite;
+      }
+    </style>
+  </head>
+  <body class="gradient-bg min-h-screen font-sans antialiased">
+    <!-- Language Switcher -->
+    <div class="fixed top-8 right-8 flex gap-2 z-50">
+      <button class="lang-btn px-4 py-2 glass-effect rounded-xl cursor-pointer font-semibold transition-all duration-300 text-indigo-600 hover:scale-105 hover:shadow-xl active:bg-indigo-600 active:text-white shadow-lg" data-lang="en" onclick="setLanguage('en')">EN</button>
+      <button class="lang-btn px-4 py-2 glass-effect rounded-xl cursor-pointer font-semibold transition-all duration-300 text-indigo-600 hover:scale-105 hover:shadow-xl shadow-lg" data-lang="id" onclick="setLanguage('id')">ID</button>
+      <button class="lang-btn px-4 py-2 glass-effect rounded-xl cursor-pointer font-semibold transition-all duration-300 text-indigo-600 hover:scale-105 hover:shadow-xl shadow-lg" data-lang="zh" onclick="setLanguage('zh')">中文</button>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="hidden fixed inset-0 gradient-bg z-[9999] justify-center items-center flex-col" id="loadingOverlay">
+      <div class="loading-spinner w-24 h-24 border-8 border-white/20 border-t-white rounded-full shadow-2xl"></div>
+      <div class="loading-text text-white text-3xl font-bold mt-8 tracking-tight">Generating Audio</div>
+      <div class="loading-dots text-white text-4xl mt-3">
+        <span>.</span><span>.</span><span>.</span>
+      </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-12 flex flex-col items-center justify-center min-h-screen">
+      <!-- Hero Section -->
+      <div class="text-center mb-12 audio-wave">
+        <h1 class="text-white text-6xl font-extrabold mb-4 tracking-tight drop-shadow-2xl">Sonify</h1>
+        <p class="text-white/90 text-xl font-medium drop-shadow-lg">Transform Text into Natural Speech with AI</p>
+        <p class="text-white/70 text-sm mt-2">Powered by Gemini TTS • 30+ Premium Voices</p>
+      </div>
+
+      <!-- Main Card -->
+      <div class="glass-effect p-10 rounded-3xl shadow-2xl max-w-4xl w-full backdrop-blur-xl">
+
+        {% if error %}
+          <div class="bg-red-50/80 border-l-4 border-red-500 p-4 mb-6 rounded-xl text-red-600 font-medium backdrop-blur">{{ error }}</div>
+        {% endif %}
+
+        {% if audio_url %}
+          <div class="bg-gradient-to-br from-indigo-50/90 to-purple-50/90 border-2 border-indigo-200 p-8 rounded-2xl mb-8 text-center backdrop-blur-sm shadow-xl">
+            <h3 class="text-indigo-600 mb-6 text-2xl font-bold">✨ Audio Generated Successfully!</h3>
+            <audio controls class="w-full max-w-lg mx-auto my-6 rounded-xl shadow-lg">
+              <source src="{{ audio_url }}" type="audio/wav">
+              Your browser does not support the audio element.
+            </audio>
+            <div class="mt-6">
+              <a href="{{ audio_url }}" download class="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-2xl">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </svg>
+                Download Audio
+              </a>
+            </div>
+          </div>
+        {% endif %}
+
+        <form method="post" id="audioForm" class="space-y-8">
+          <div>
+            <label for="num_speakers" class="block mb-4 font-bold text-gray-800 text-lg">Number of Speakers</label>
+            <div class="flex gap-3 flex-wrap mb-3">
+              <button type="button" class="speaker-btn flex-1 min-w-[90px] px-6 py-4 border-2 border-gray-200 bg-white/80 rounded-xl cursor-pointer text-base transition-all duration-300 font-semibold hover:border-indigo-500 hover:bg-indigo-50 hover:scale-105 hover:shadow-lg active:bg-indigo-600 active:text-white active:border-indigo-600" data-speakers="1">1</button>
+              <button type="button" class="speaker-btn flex-1 min-w-[90px] px-6 py-4 border-2 border-gray-200 bg-white/80 rounded-xl cursor-pointer text-base transition-all duration-300 font-semibold hover:border-indigo-500 hover:bg-indigo-50 hover:scale-105 hover:shadow-lg" data-speakers="2">2</button>
+              <button type="button" class="speaker-btn flex-1 min-w-[90px] px-6 py-4 border-2 border-gray-200 bg-white/80 rounded-xl cursor-pointer text-base transition-all duration-300 font-semibold hover:border-indigo-500 hover:bg-indigo-50 hover:scale-105 hover:shadow-lg" data-speakers="3">3</button>
+              <button type="button" class="speaker-btn flex-1 min-w-[90px] px-6 py-4 border-2 border-gray-200 bg-white/80 rounded-xl cursor-pointer text-base transition-all duration-300 font-semibold hover:border-indigo-500 hover:bg-indigo-50 hover:scale-105 hover:shadow-lg" data-speakers="4">4</button>
+              <button type="button" class="speaker-btn flex-1 min-w-[90px] px-6 py-4 border-2 border-gray-200 bg-white/80 rounded-xl cursor-pointer text-base transition-all duration-300 font-semibold hover:border-indigo-500 hover:bg-indigo-50 hover:scale-105 hover:shadow-lg" data-speakers="custom">Custom</button>
+            </div>
+            <div class="hidden mt-3 gap-3 items-center" id="customInput">
+              <input type="number" id="customSpeakers" min="1" max="30" placeholder="Enter number (1-30)" class="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl text-base focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200" />
+              <button type="button" class="px-6 py-3 border-2 border-indigo-500 bg-indigo-50 text-indigo-600 rounded-xl cursor-pointer text-base transition-all duration-300 font-semibold hover:bg-indigo-600 hover:text-white" onclick="applyCustomSpeakers()">Apply</button>
+            </div>
+            <input type="hidden" id="num_speakers" name="num_speakers" value="1" />
+          </div>
+
+          <div>
+            <label for="script" class="block mb-4 font-bold text-gray-800 text-lg">Your Script</label>
+            <textarea
+              id="script"
+              name="script"
+              rows="10"
+              placeholder="Speaker 1: Hello there!&#10;Speaker 2: Hi! How are you?"
+              class="w-full p-5 border-2 border-gray-200 rounded-xl text-base font-mono resize-y transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 shadow-sm"
+            >{{ script or "" }}</textarea>
+          </div>
+
+          <button type="submit" class="w-full py-5 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white rounded-xl text-lg font-bold cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-2xl active:scale-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none shadow-xl">
+            <span class="flex items-center justify-center gap-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Generate Audio
+            </span>
+          </button>
+        </form>
+
+        <div class="bg-gradient-to-br from-indigo-50/50 to-purple-50/50 p-6 rounded-2xl mt-8 border border-indigo-100">
+          <h3 class="text-indigo-600 mb-4 text-lg font-bold flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Quick Tips
+          </h3>
+          <ul class="space-y-3">
+            <li class="flex items-start gap-3 text-gray-700 text-sm">
+              <span class="text-indigo-600 font-bold mt-0.5">✓</span>
+              <span><strong>Single speaker:</strong> Write directly or use <code class="bg-white/80 px-2 py-0.5 rounded text-xs font-mono border border-gray-200">Speaker 1:</code></span>
+            </li>
+            <li class="flex items-start gap-3 text-gray-700 text-sm">
+              <span class="text-indigo-600 font-bold mt-0.5">✓</span>
+              <span><strong>Multiple speakers:</strong> Use format <code class="bg-white/80 px-2 py-0.5 rounded text-xs font-mono border border-gray-200">Speaker 1:</code>, <code class="bg-white/80 px-2 py-0.5 rounded text-xs font-mono border border-gray-200">Speaker 2:</code></span>
+            </li>
+            <li class="flex items-start gap-3 text-gray-700 text-sm">
+              <span class="text-indigo-600 font-bold mt-0.5">✓</span>
+              <span><strong>AI-powered:</strong> Random voice selection from 30+ premium options</span>
+            </li>
+            <li class="flex items-start gap-3 text-gray-700 text-sm">
+              <span class="text-indigo-600 font-bold mt-0.5">✓</span>
+              <span><strong>Multi-language:</strong> Japanese, English, Chinese, Indonesian & more</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <script src="{{ url_for( 'static', filename='script.js') }}"></script>
+  </body>
+</html>
